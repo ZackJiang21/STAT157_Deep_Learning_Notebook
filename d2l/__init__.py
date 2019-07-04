@@ -3,6 +3,10 @@ from matplotlib import pyplot as plt
 
 import sys
 
+from mxnet import gluon, autograd
+from d2l import Accumulator
+from d2l import Animator
+
 
 def use_svg_display():
     # Use the svg format to display plot in jupyter
@@ -58,3 +62,52 @@ def get_fashion_mnist_labels(labels):
     text_labels = ['t-shirt', 'trouser', 'pullover', 'dress', 'coat',
                    'sandal', 'shirt', 'sneaker', 'bag', 'ankle boot']
     return [text_labels[int(i)] for i in labels]
+
+
+def load_data_fashion_mnist(batch_size, resize=None):
+    """Download the Fashion-MNIST dataset and then load into memory."""
+    dataset = gluon.data.vision
+    trans = [dataset.transforms.Resize(resize)] if resize else []
+    trans.append(dataset.transforms.ToTensor())
+    trans = dataset.transforms.Compose(trans)
+    mnist_train = dataset.FashionMNIST(train=True).transform_first(trans)
+    mnist_test = dataset.FashionMNIST(train=False).transform_first(trans)
+    return (gluon.data.DataLoader(mnist_train, batch_size, shuffle=True,
+                                  num_workers=get_dataloader_workers()),
+            gluon.data.DataLoader(mnist_test, batch_size, shuffle=False,
+                                  num_workers=get_dataloader_workers()))
+
+
+def accuracy(y_hat, y):
+    return (y_hat.argmax(axis=1) == y.astype("float32")).sum().asscalar()
+
+
+def evaluate_accuracy(net, data_iter):
+    metric = Accumulator.Accumulator(2)
+    for X, y in data_iter:
+        metric.add(accuracy(net(X), y), y.size)
+    return metric[0] / metric[1]
+
+
+def train_epoch_ch3(net, train_iter, loss, updater):
+    metric = Accumulator.Accumulator(3)
+    if isinstance(updater, gluon.Trainer):
+        updater = updater.step
+    for X, y in train_iter:
+        with autograd.record():
+            y_hat = net(X)
+            l = loss(y_hat, y)
+        l.backward()
+        updater(X.shape[0])
+        metric.add(l.sum().asscalar(), accuracy(y_hat, y), y.size)
+    return metric[0] / metric[2], metric[1] / metric[2]
+
+
+def train_ch3(net, train_iter, test_iter, loss, num_epochs, updater):
+    animator = Animator.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                                 ylim=[0.3, 0.9],
+                                 legend=['train loss', 'train acc', 'test acc'])
+    for epoch in range(num_epochs):
+        train_metrics = train_epoch_ch3(net, train_iter, loss, updater)
+        test_acc = evaluate_accuracy(net, test_iter)
+        animator.add(epoch + 1, train_metrics + (test_acc,))
