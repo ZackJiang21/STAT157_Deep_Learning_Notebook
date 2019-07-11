@@ -111,3 +111,11 @@ def train_ch3(net, train_iter, test_iter, loss, num_epochs, updater):
         train_metrics = train_epoch_ch3(net, train_iter, loss, updater)
         test_acc = evaluate_accuracy(net, test_iter)
         animator.add(epoch + 1, train_metrics + (test_acc,))
+
+def predict_ch3(net, test_iter, n = 6):
+    for X, y in test_iter:
+        break
+    trues = get_fashion_mnist_labels(y.asnumpy())
+    preds = get_fashion_mnist_labels(net(X).argmax(axis = 1).asnumpy())
+    titles = [true + "\n" + pred for true, pred in zip(trues, preds)]
+    show_images(X[0:n].reshape(n,28,28), 1, n, titles = titles[0:n])
