@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 import sys
 
-from mxnet import gluon, autograd
+from mxnet import gluon, autograd, nd
 from d2l import Accumulator
 from d2l import Animator
 
@@ -119,3 +119,27 @@ def predict_ch3(net, test_iter, n = 6):
     preds = get_fashion_mnist_labels(net(X).argmax(axis = 1).asnumpy())
     titles = [true + "\n" + pred for true, pred in zip(trues, preds)]
     show_images(X[0:n].reshape(n,28,28), 1, n, titles = titles[0:n])
+
+
+def plot(X, Y=None, xlabel=None, ylabel=None, legend=[], xlim=None,
+         ylim=None, xscale='linear', yscale='linear', fmts=None,
+         figsize=(3.5, 2.5), axes=None):
+    """Plot multiple lines"""
+    set_figsize(figsize)
+    axes = axes if axes else plt.gca()
+    if isinstance(X, nd.NDArray): X = X.asnumpy()
+    if isinstance(Y, nd.NDArray): Y = Y.asnumpy()
+    if not hasattr(X[0], "__len__"): X = [X]
+    if Y is None: X, Y = [[]]*len(X), X
+    if not hasattr(Y[0], "__len__"): Y = [Y]
+    if len(X) != len(Y): X = X * len(Y)
+    if not fmts: fmts = ['-']*len(X)
+    axes.cla()
+    for x, y, fmt in zip(X, Y, fmts):
+        if isinstance(x, nd.NDArray): x = x.asnumpy()
+        if isinstance(y, nd.NDArray): y = y.asnumpy()
+        if len(x):
+            axes.plot(x, y, fmt)
+        else:
+            axes.plot(y, fmt)
+    set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend)
